@@ -199,6 +199,9 @@ class Calibration(object):
 DATAROOT = '/data/sets/nuscenes'
 READ_IMG = True
 WRITE_PCD = True
+WRITE_FRUSTUM_PCD = True
+MIN_OBJ_PIX_HEIGHT = 20
+MIN_FRUSTUM_PT_COUNT = 5
 type_whitelist = ['Pedestrian', 'Car', 'Truck']
 nusc_file = os.path.join(ROOT_DIR, "data", "nusc.pickle")
 if os.path.isfile(nusc_file):
@@ -218,9 +221,12 @@ box3d_size_list = []  # array of l,w,h
 frustum_angle_list = []  # angle of 2d box center from pos x-axis
 sensor_cam_front = 'CAM_FRONT'
 sensor_lidar_top = 'LIDAR_TOP'
+pos_cnt = 0
+all_cnt = 0
+pick = 88
 for i, my_sample in enumerate(nusc.sample):
-    if i<100: continue
-    if i>100: break
+    if i<pick: continue
+    if i>pick: break
     #nusc.list_sample(nusc.sample[0]['token'])
     sample_token = my_sample['token']
     #data = my_sample['data']
@@ -272,16 +278,14 @@ for i, my_sample in enumerate(nusc.sample):
 
     ## Get annotations in lidar frame
     _, boxes, _ = nusc.get_sample_data(my_sample['data'][sensor_lidar_top]) # List[Box]
+    j = 0
     for box in boxes:
-        # reject this box if not in whitelisted categroy
+        # reject this box if not in whitelisted category
         if box.name not in category2str: continue
-        #if category2str[box.name] not in type_whitelist: continue
 
         box3d_center = box.center
         corners_3d = np.transpose(box.corners()) # 8x3
-        #print("corners_3d=", corners_3d)
         corners_2d = calib.project_velo2cam(corners_3d) # 8x2
-        #print("corners_2d=", corners_2d)
         corners_x, corners_y = corners_2d[:, 0], corners_2d[:, 1]
         xmin, xmax = int(np.amin(corners_x)), int(np.amax(corners_x))
         ymin, ymax = int(np.amin(corners_y)), int(np.amax(corners_y))
@@ -301,20 +305,46 @@ for i, my_sample in enumerate(nusc.sample):
         # According to this, right is zero, and clockwise is positive
         frustum_angle = -1 * np.arctan2(box2d_center_rect[0, 2],
                                         box2d_center_rect[0, 0])
-        if box_fov_inds.any():
-            print("cat={}, xmin={:d}, ymin={:d}, xmax={:d}, ymax={:d}".format(box.name, xmin, ymin, xmax, ymax))
+        if pc_in_box_fov.shape[0]:
+            #print("cat={}, xmin={:d}, ymin={:d}, xmax={:d}, ymax={:d}".format(box.name, xmin, ymin, xmax, ymax))
             #print("center=({:.1f}, {:.1f}, {:.1f})".format(box3d_center[0], box3d_center[1], box3d_center[2]))
             #print("frustum_angle=({:.2f})".format(frustum_angle))
-            _, inds = extract_pc_in_box3d(pc_in_box_fov, corners_3d)
+            # print("corners_3d=", corners_3d)
+            # print("corners_2d=", corners_2d)
+            corners_3d_rect = calib.velo2cam(corners_3d)
+            _, inds = extract_pc_in_box3d(pc_in_box_fov, corners_3d_rect)
             label = np.zeros((pc_in_box_fov.shape[0]))
             label[inds] = 1
 
             # Get 3D BOX heading
             quat = Quaternion(box.orientation)
-            print("orientation={:d} deg".format(int(quat.degrees)))
+            print("cat={}, x_c={:d}, y_c={:d}, orientation={:d} deg, n_pts={:d}".format(\
+                box.name, int(box2d_center[0]), int(box2d_center[1]), int(quat.degrees), pc_in_box_fov.shape[0]))
             # we use same notation as kitti, i.e. rotation around Y-axis in cam coordinates
             # [-pi .. pi], with X-axis being zero.
             heading_angle = -np.deg2rad(quat.degrees)
             # Get 3D BOX size
             box3d_size = box.wlh[[1,0,2]] # l,w,h
+
+            # Reject too far away object or object with too few points
+            if ymax - ymin < MIN_OBJ_PIX_HEIGHT or np.sum(label) < MIN_FRUSTUM_PT_COUNT:
+                continue
+
+            if WRITE_FRUSTUM_PCD:
+                write2pcd(pc_in_box_fov, "/home/jhuang/pc_frustum.pcd".replace('.pcd', '_{:d}.pcd'.format(j)))
+                j+=1
+
+            id_list.append(sample_token)
+            box2d_list.append(np.array([xmin, ymin, xmax, ymax]))
+            box3d_list.append(corners_3d_rect)
+            input_list.append(pc_in_box_fov)
+            label_list.append(label)
+            type_list.append(category2str[box.name])
+            heading_list.append(heading_angle)
+            box3d_size_list.append(box3d_size)
+            frustum_angle_list.append(frustum_angle)
+
+            # collect statistics
+            pos_cnt += np.sum(label)
+            all_cnt += pc_in_box_fov.shape[0]
 

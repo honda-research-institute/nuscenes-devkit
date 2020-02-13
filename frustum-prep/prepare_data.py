@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import cv2
 import pickle
+import tqdm # for progress bar
 from pyquaternion import Quaternion
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BASE_DIR)
@@ -197,13 +198,15 @@ class Calibration(object):
         return pts_3d_rect
 
 DATAROOT = '/data/sets/nuscenes'
-READ_IMG = True
-WRITE_PCD = True
-WRITE_FRUSTUM_PCD = True
+READ_IMG = False
+WRITE_PCD = False
+WRITE_FRUSTUM_PCD = False
+VERBOSITY = 0
 MIN_OBJ_PIX_HEIGHT = 20
 MIN_FRUSTUM_PT_COUNT = 5
 type_whitelist = ['Pedestrian', 'Car', 'Truck']
 nusc_file = os.path.join(ROOT_DIR, "data", "nusc.pickle")
+output_filename = os.path.join(ROOT_DIR, "data", "train.pickle")
 if os.path.isfile(nusc_file):
     nusc = pickle.load(open(nusc_file, "rb"))
 else:
@@ -224,9 +227,10 @@ sensor_lidar_top = 'LIDAR_TOP'
 pos_cnt = 0
 all_cnt = 0
 pick = 88
-for i, my_sample in enumerate(nusc.sample):
-    if i<pick: continue
-    if i>pick: break
+for i, my_sample in enumerate(tqdm.tqdm(nusc.sample)):
+    #bar.update(i + 1)
+    #if i<pick: continue
+    #if i>pick: break
     #nusc.list_sample(nusc.sample[0]['token'])
     sample_token = my_sample['token']
     #data = my_sample['data']
@@ -318,8 +322,9 @@ for i, my_sample in enumerate(nusc.sample):
 
             # Get 3D BOX heading
             quat = Quaternion(box.orientation)
-            print("cat={}, x_c={:d}, y_c={:d}, orientation={:d} deg, n_pts={:d}".format(\
-                box.name, int(box2d_center[0]), int(box2d_center[1]), int(quat.degrees), pc_in_box_fov.shape[0]))
+            if VERBOSITY>0:
+                print("cat={}, x_c={:d}, y_c={:d}, orientation={:d} deg, n_pts={:d}".format(\
+                    box.name, int(box2d_center[0]), int(box2d_center[1]), int(quat.degrees), pc_in_box_fov.shape[0]))
             # we use same notation as kitti, i.e. rotation around Y-axis in cam coordinates
             # [-pi .. pi], with X-axis being zero.
             heading_angle = -np.deg2rad(quat.degrees)
@@ -348,3 +353,16 @@ for i, my_sample in enumerate(nusc.sample):
             pos_cnt += np.sum(label)
             all_cnt += pc_in_box_fov.shape[0]
 
+print('Average pos ratio: %f' % (pos_cnt / float(all_cnt)))
+print('Average npoints: %f' % (float(all_cnt) / len(id_list)))
+
+with open(output_filename, 'wb') as fp:
+    pickle.dump(id_list, fp)
+    pickle.dump(box2d_list, fp)
+    pickle.dump(box3d_list, fp)
+    pickle.dump(input_list, fp)
+    pickle.dump(label_list, fp)
+    pickle.dump(type_list, fp)
+    pickle.dump(heading_list, fp)
+    pickle.dump(box3d_size_list, fp)
+    pickle.dump(frustum_angle_list, fp)

@@ -212,6 +212,10 @@ class Calibration(object):
         return pts_3d_rect
 
 
+# Frustum-Pnet requires old pickle protocol
+def dump_pickle2(data, fp):
+    pickle.dump(data, fp, protocol=2)
+
 DATAROOT = '/data/sets/nuscenes'
 READ_IMG = False
 WRITE_PCD = False
@@ -415,23 +419,23 @@ if PLOT_HISTOGRAM:
 if WRITE_PICKLE:
     of = output_filename.replace(".pickle", "_train.pickle")
     with open(of, 'wb') as fp:
-        pickle.dump(id_list_train, fp)
-        pickle.dump(box2d_list_train, fp)
-        pickle.dump(box3d_list_train, fp)
-        pickle.dump(input_list_train, fp)
-        pickle.dump(label_list_train, fp)
-        pickle.dump(type_list_train, fp)
-        pickle.dump(heading_list_train, fp)
-        pickle.dump(box3d_size_list_train, fp)
-        pickle.dump(frustum_angle_list_train, fp)
+        dump_pickle2(id_list_train, fp)
+        dump_pickle2(box2d_list_train, fp)
+        dump_pickle2(box3d_list_train, fp)
+        dump_pickle2(input_list_train, fp)
+        dump_pickle2(label_list_train, fp)
+        dump_pickle2(type_list_train, fp)
+        dump_pickle2(heading_list_train, fp)
+        dump_pickle2(box3d_size_list_train, fp)
+        dump_pickle2(frustum_angle_list_train, fp)
     of = output_filename.replace(".pickle", "_val.pickle")
     with open(of, 'wb') as fp:
-        pickle.dump(id_list_val, fp)
-        pickle.dump(box2d_list_val, fp)
-        pickle.dump(box3d_list_val, fp)
-        pickle.dump(input_list_val, fp)
-        pickle.dump(label_list_val, fp)
-        pickle.dump(type_list_val, fp)
-        pickle.dump(heading_list_val, fp)
-        pickle.dump(box3d_size_list_val, fp)
-        pickle.dump(frustum_angle_list_val, fp)
+        dump_pickle2(id_list_val, fp)
+        dump_pickle2(box2d_list_val, fp)
+        dump_pickle2(box3d_list_val, fp)
+        dump_pickle2(input_list_val, fp)
+        dump_pickle2(label_list_val, fp)
+        dump_pickle2(type_list_val, fp)
+        dump_pickle2(heading_list_val, fp)
+        dump_pickle2(box3d_size_list_val, fp)
+        dump_pickle2(frustum_angle_list_val, fp)

@@ -228,7 +228,7 @@ MIN_FRUSTUM_PT_COUNT = 5
 MAX_DIST = 25  # meters, only use objects up to this distance
 type_whitelist = category2str.keys()
 nusc_file = os.path.join(ROOT_DIR, "data", "nusc.pickle")
-output_filename = os.path.join(ROOT_DIR, "data", "nusc_frustum.pickle")
+output_filename = os.path.join(ROOT_DIR, "data", "nusc_carpedtruck.pickle")
 if os.path.isfile(nusc_file):
     print("Loading {} ...".format(nusc_file))
     nusc = pickle.load(open(nusc_file, "rb"))
@@ -382,7 +382,7 @@ for i, my_sample in enumerate(tqdm.tqdm(nusc.sample)):
                 box3d_list_train.append(corners_3d_rect)
                 input_list_train.append(pc_in_box_fov)
                 label_list_train.append(label)
-                type_list_train.append(category2str[box.name])
+                type_list_train.append(obj_category)
                 heading_list_train.append(heading_angle)
                 box3d_size_list_train.append(box3d_size)
                 frustum_angle_list_train.append(frustum_angle)
@@ -392,7 +392,7 @@ for i, my_sample in enumerate(tqdm.tqdm(nusc.sample)):
                 box3d_list_val.append(corners_3d_rect)
                 input_list_val.append(pc_in_box_fov)
                 label_list_val.append(label)
-                type_list_val.append(category2str[box.name])
+                type_list_val.append(obj_category)
                 heading_list_val.append(heading_angle)
                 box3d_size_list_val.append(box3d_size)
                 frustum_angle_list_val.append(frustum_angle)

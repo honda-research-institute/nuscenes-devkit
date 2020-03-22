@@ -1,6 +1,5 @@
 ```bash
 sudo pip install virtualenv virtualenvwrapper
-mkvirtualenv nuscenes --python=python3
 export WORKON_HOME=~/.virtualenvs
 mkdir -p ${WORKON_HOME}
 # Add "source /usr/local/bin/virtualenvwrapper.sh" to ~/.bashrc

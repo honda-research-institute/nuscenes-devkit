@@ -4,7 +4,6 @@
 *.aux
 *.pdf
 *.pyc
-*.png
 *.jpg
 *ipynb_*
 *ipynb
